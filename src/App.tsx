@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import { FaPaperPlane, FaUserTie, FaBriefcase, FaMagic, FaSpinner, FaCopy, FaCheck } from 'react-icons/fa';
+import { FaPaperPlane, FaUserTie, FaBriefcase, FaMagic, FaSpinner, FaCopy, FaCheck , FaFileUpload} from 'react-icons/fa';
 import { MdContentCopy } from "react-icons/md";
+import pdfToText from 'react-pdftotext';
 
 const JobAssistant = () => {
   const model = 'gemini-2.5-flash';
@@ -10,6 +11,8 @@ const JobAssistant = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState(null);
+
+  const fileInputRef = useRef(null);
 
   const messagesEndRef = useRef(null);
 
@@ -20,6 +23,23 @@ const JobAssistant = () => {
       return ;
     }
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        setLoading(true);
+        pdfToText(file)
+            .then(text => {
+                setResume(text);
+                setLoading(false);
+            })
+            .catch(error => {
+                console.error("Failed to extract text from pdf", error);
+                alert("Failed to read PDF. Please try copying the text manually.");
+                setLoading(false);
+            });
+    }
   };
 
   useEffect(() => {
@@ -160,7 +180,8 @@ const JobAssistant = () => {
                 <FaMagic size={14} />
              </div>
              <div className="flex items-center gap-2 text-gray-400 text-sm mt-2">
-                <FaSpinner className="animate-spin text-blue-600" size={14}/> Analyzing your profile...
+                <FaSpinner className="animate-spin text-blue-400" /> 
+                {resume && !jobDescription ? "Extracting PDF text..." : "Analyzing your profile..."}
              </div>
           </div>
         )}
@@ -172,12 +193,30 @@ const JobAssistant = () => {
         <div className="max-w-4xl mx-auto border border-gray-300 rounded-3xl p-2 shadow-lg hover:shadow-xl transition-shadow duration-300 focus-within:ring-2 focus-within:ring-black/5 relative bg-gray-50">
           
           <div className="flex flex-col md:flex-row gap-2 p-2">
-            {/* Resume Input */}
+            
             <div className="flex-1 relative group">
-                <FaUserTie className="absolute top-3 left-3 text-gray-400 group-focus-within:text-black" />
+                <div className="absolute top-3 left-3 z-10 flex gap-2">
+                    <FaUserTie className="text-gray-400 group-focus-within:text-black mt-1" />
+                </div>
+      
+                <button 
+                    onClick={() => {if(fileInputRef.current) fileInputRef.current.click()} }
+                    className="absolute top-2 right-2 z-20 p-1.5 bg-white border border-gray-200 rounded-md hover:bg-gray-100 text-gray-500 text-xs flex items-center gap-1 shadow-sm"
+                    title="Upload PDF Resume"
+                >
+                    <FaFileUpload /> <span className="hidden sm:inline">Upload PDF</span>
+                </button>
+                <input 
+                    type="file" 
+                    accept="application/pdf" 
+                    ref={fileInputRef} 
+                    onChange={handleFileUpload} 
+                    className='hidden'
+                />
+
                 <textarea 
-                  className="w-full bg-transparent p-3 pl-10 text-sm outline-none resize-none h-20 md:h-24 placeholder:text-gray-400"
-                  placeholder="Paste Resume Text here..."
+                  className="w-full bg-transparent p-3 pl-10 pt-10 md:pt-3 text-sm outline-none resize-none h-20 md:h-24 placeholder:text-gray-400"
+                  placeholder="Paste Resume text OR Upload PDF ->"
                   value={resume}
                   onChange={(e) => setResume(e.target.value)}
                 />
@@ -185,6 +224,7 @@ const JobAssistant = () => {
 
             <div className="hidden md:block w-px bg-gray-200 my-2"></div>
 
+            {/* JD Input */}
             <div className="flex-1 relative group">
                 <FaBriefcase className="absolute top-3 left-3 text-gray-400 group-focus-within:text-black" />
                 <textarea 
@@ -196,7 +236,6 @@ const JobAssistant = () => {
             </div>
           </div>
 
-          {/* Send Button */}
           <div className="absolute bottom-4 right-4">
             <button 
               onClick={handleAnalyze}
